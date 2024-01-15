@@ -25,11 +25,16 @@ def is_row_a_header(row: List[str]) -> bool:
     return any(not value.replace('.', '', 1).isdigit() for value in row)
 
 
+def is_row_all_digits(row: List[str]) -> bool:
+    return all(col.isdigit() for col in row)
+
+
 def determine_col_names(file_path: str, delimiter: str) -> Tuple[List[str], bool]:
     with open(file_path) as fd:
         reader = csv.reader(fd, delimiter=delimiter)
         first_line = next(reader)
-        if is_row_a_header(first_line):
+        second_line = next(reader)
+        if is_row_a_header(first_line) and is_row_all_digits(second_line):
             return first_line, True
         else:
             col_count = len(first_line)
@@ -98,10 +103,10 @@ def analyze_file(file_path: str, delimiter: str = ',', column: str = '0') -> Uni
     return stats
 
 
-def print_stats(stats: pd.DataFrame) -> None:
-    if stats is not None:
-        print(f"Stats for column(s):{', '.join(stats.columns)}:")
-        print(stats)
+def print_stats(stats_df: pd.DataFrame) -> None:
+    if stats_df is not None:
+        print(f"Stats for column(s):{', '.join(stats_df.columns.astype(str))}:")
+        print(stats_df)
 
 
 def parse_args() -> argparse.Namespace:
@@ -123,8 +128,8 @@ def main():
         file_path = args.file
     else:
         file_path = sys.stdin
-    stats = analyze_file(file_path, args.delimiter, args.columns)
-    print_stats(stats)
+    stats_df = analyze_file(file_path, args.delimiter, args.columns)
+    print_stats(stats_df)
 
 
 if __name__ == "__main__":
