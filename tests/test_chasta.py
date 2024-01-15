@@ -6,9 +6,9 @@ import chasta.chasta as cs
 
 DEFAULT_DATA_FILE_PATH = '/tmp/chasta_test_data.txt'
 
-DATA_3_ROWS_2_COLS = [[1, 10], [3, 30], [2, 20]]
-HEADER_2_COLS = ['single_digit', 'double_digit']
-DATA_3_ROWS_2_COLS_WITH_HEADER = [HEADER_2_COLS, [1, 10], [3, 30], [2, 20]]
+DATA_3_ROWS_2_COLS: List[List[str]] = [['1', '10'], ['3', '30'], ['2', '20']]
+HEADER_2_COLS: List[str] = ['single_digit', 'double_digit']
+DATA_3_ROWS_2_COLS_WITH_HEADER: List[List[str]] = [HEADER_2_COLS, *DATA_3_ROWS_2_COLS]
 
 
 def data_to_file(data: Union[str, List[str]], delimiter: str = ',', file_path: str = DEFAULT_DATA_FILE_PATH):
@@ -73,7 +73,8 @@ def test_determine_column_names():
         assert not has_header, 'no header should be detected'
 
         # with header
-        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS_WITH_HEADER, delimiter), delimiter)
+        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS_WITH_HEADER, delimiter),
+                                                       delimiter)
         assert col_names == HEADER_2_COLS, 'column_names with header'
         assert has_header, 'header should be detected'
 
