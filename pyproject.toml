@@ -2,7 +2,7 @@
 name = "chasta"
 version = "0.1.0"
 description = ""
-authors = ["jerome provensal <gitkraken@provensal.com>"]
+authors = ["Jerome Provensal <jeromegit@provensal.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -11,7 +11,7 @@ pandas = "^2.0.3"
 plotly = "^5.15.0"
 
 [tool.poetry.scripts]
-chasta = 'chasta:main'
+chasta = 'chasta.chasta:main'
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.0"
