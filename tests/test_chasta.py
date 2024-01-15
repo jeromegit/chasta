@@ -40,7 +40,7 @@ def analyze_numeric_data_expected_vs_actual(data: List[Any],
                                             delimiter: str = ',',
                                             cols: str = "0",
                                             instance_count: bool = False) -> None:
-    actual = cs.analyze_file(data_to_file(data), instance_count, delimiter, cols)
+    actual, _ = cs.analyze_file(data_to_file(data), instance_count, None, delimiter, cols)
 
     if not isinstance(expected_kvs, list):
         expected_kvs = [expected_kvs]

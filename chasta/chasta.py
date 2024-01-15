@@ -1,10 +1,10 @@
 import argparse
 import csv
 import sys
-from typing import List, Tuple, Set, Any, Union
+from typing import List, Tuple, Union
 
-import numpy as np
 import pandas as pd
+import plotly.express as px
 
 Debug = False
 
@@ -42,24 +42,8 @@ def determine_col_names(file_path: str, delimiter: str) -> Tuple[List[str], bool
             return col_names, False
 
 
-def determine_types(dtypes: Set[Any]) -> Tuple[bool, bool, bool]:
-    num_types = 0
-    non_num_types = 0
-    for dtype in dtypes:
-        if np.issubdtype(dtype, np.number):
-            num_types += 1
-        else:
-            non_num_types += 1
-
-    is_num_only = num_types > 0 and non_num_types == 0
-    is_non_num_only = non_num_types > 0 and num_types == 0
-    is_mixed = num_types > 0 and non_num_types > 0
-
-    return is_num_only, is_non_num_only, is_mixed
-
-
-def analyze_file(file_path: str, do_instance_count: bool = False, delimiter: str = ',', column: str = '0') -> Union[
-    pd.DataFrame, pd.Series, None]:
+def analyze_file(file_path: str, do_instance_count: bool = False, chart: str = None, delimiter: str = ',',
+                 column: str = '0') -> Tuple[pd.DataFrame, Union[pd.DataFrame, pd.Series, None]]:
     try:
         col_names, has_header = determine_col_names(file_path, delimiter)
         if has_header:
@@ -78,31 +62,27 @@ def analyze_file(file_path: str, do_instance_count: bool = False, delimiter: str
     for col in column.split(','):
         column_name = determine_column_name(col, df_columns)
         column_names.append(column_name)
-        # if num_only:
-        #     df = df[pd.to_numeric(df[column_name], errors='coerce').notnull()]
         column_types.add(df[column_name].dtypes)
 
-    df = df[column_names]
-
-    is_num_only, is_non_num_only, is_mixed = determine_types(column_types)
-    if is_mixed:
-        include = 'all'
-    #    print(df)
+    df_to_stats = df[column_names]
+    if chart is None:
+        df_to_chart = None
+    else:
+        if len(chart):
+            chart_col = chart
+            chart_column_name = determine_column_name(chart_col, df_columns)
+            df_to_chart = df[[*column_names, chart_column_name]]
+        else:
+            df_to_chart = df_to_stats
 
     if do_instance_count:
-        stats = df.value_counts()
+        stats = df_to_stats.value_counts()
     else:
-        stats = df.describe(percentiles=[.25, .50, .75, .90, .95, .99, .999], include='all')
-        if not is_non_num_only:
-            stats.loc['median'] = df.describe().loc[['50%']].values[0]
-    if Debug:
-        print('-' * 80)
-        print(df.value_counts())
-        print('-' * 80)
-        print(df.dtypes)
-        print('-' * 80)
+        stats = df_to_stats.describe(percentiles=[.25, .50, .75, .90, .95, .99, .999], include='all')
+        if '50%' in stats.index:
+            stats.loc['median'] = stats.loc['50%']
 
-    return stats
+    return stats, df_to_chart
 
 
 def print_stats(stats: Union[None, pd.DataFrame, pd.Series]) -> None:
@@ -114,12 +94,23 @@ def print_stats(stats: Union[None, pd.DataFrame, pd.Series]) -> None:
             print(stats.to_string(dtype=False))
 
 
+def chart(chart_df: pd.DataFrame, x_axis: Union[None, str]) -> None:
+    fig = px.area(chart_df)
+    # , y)=NEW_TO_ACK,
+    #                  x='dt_in'
+    # )
+    fig.update_layout(hovermode='x unified')
+
+    fig.show()
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyze a CSV file")
     parser.add_argument("-d", "--delimiter", type=str, default=",", help="column delimiter (default: ',')")
     parser.add_argument("-c", "--columns", type=str, default="0",
                         help="CSV column number(s) or name(s) to analyze (default: 0)")
+    parser.add_argument("-C", "--chart", nargs='?', const='', default=None,
+                        help="Chart column(s) optionally specifying the column number/name for the x-axis")
     parser.add_argument("-i", "--instance_count", action='store_true', help="Instance count")
     parser.add_argument("-n", "--num_only", action='store_true', help="Only consider numeric values")
     #    parser.add_argument("-u", "--use_header", action='store_true', help="Use provided headers")
@@ -135,8 +126,12 @@ def main():
         file_path = args.file
     else:
         file_path = sys.stdin
-    stats_df = analyze_file(file_path, args.instance_count, args.delimiter, args.columns)
-    print_stats(stats_df)
+    stats_obj, chart_df = analyze_file(file_path, args.instance_count, args.chart, args.delimiter, args.columns)
+
+    print_stats(stats_obj)
+
+    if args.chart is not None:
+        chart(chart_df, args.chart)
 
 
 if __name__ == "__main__":
