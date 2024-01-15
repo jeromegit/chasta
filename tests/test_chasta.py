@@ -7,10 +7,13 @@ import chasta.chasta as cs
 DEFAULT_DATA_FILE_PATH = '/tmp/chasta_test_data.txt'
 
 DATA_3_ROWS_2_COLS = [[1, 10], [3, 30], [2, 20]]
-DATA_3_ROWS_2_COLS_WITH_HEADER = [['single_digit', 'double_digit'], [1, 10], [3, 30], [2, 20]]
+HEADER_2_COLS = ['single_digit', 'double_digit']
+DATA_3_ROWS_2_COLS_WITH_HEADER = [HEADER_2_COLS, [1, 10], [3, 30], [2, 20]]
 
 
-def data_to_file(data: str, file_path: str = DEFAULT_DATA_FILE_PATH):
+def data_to_file(data: Union[str, List[str]], delimiter: str = ',', file_path: str = DEFAULT_DATA_FILE_PATH):
+    if isinstance(data, list):
+        data = convert_array_to_str(data, delimiter)
     with open(file_path, "w") as fd:
         fd.write(data)
 
@@ -33,8 +36,6 @@ def analyze_numeric_data_expected_vs_actual(data: List[Any],
                                             expected_kvs: Union[Dict[str, float], List[Dict[str, float]]],
                                             delimiter: str = ',',
                                             cols: str = "0") -> None:
-    if isinstance(data, list):
-        data = convert_array_to_str(data, delimiter)
     actual = cs.analyze_file(data_to_file(data), delimiter, cols)
 
     if not isinstance(expected_kvs, list):
@@ -50,16 +51,31 @@ def analyze_numeric_data_expected_vs_actual(data: List[Any],
 
 def test_determine_column_name():
     digit_col_names = ['col_0', 'col_1']
-    assert cs.determine_column_name('0', digit_col_names), 'using column number'
+    assert cs.determine_column_name('0', digit_col_names) == digit_col_names[0], 'using column number'
     with pytest.raises(AssertionError) as ae:
         assert cs.determine_column_name('2', digit_col_names), 'using digit greater than max'
     assert "The specified column number can't be > 1" in str(ae.value)
 
-    name_col_names = ['single_digit', 'double_digit']
-    assert cs.determine_column_name('single_digit', name_col_names), 'using column name'
+    name_col_names = HEADER_2_COLS
+    col_name = HEADER_2_COLS[0]
+    assert cs.determine_column_name(col_name, name_col_names) == col_name, 'using column name'
     with pytest.raises(AssertionError) as ae:
         assert cs.determine_column_name('bad_col_name', name_col_names), 'using digit greater than max'
-    assert "The specified column name:bad_col_name is not in: single_digit, double_digit" in str(ae.value)
+    assert f"The specified column name:bad_col_name is not in: {', '.join(name_col_names)}" in str(ae.value)
+
+
+def test_determine_column_names():
+    delimiters = [',', '|', ' ', '\t']
+    for delimiter in delimiters:
+        # with no header
+        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS, delimiter), delimiter)
+        assert col_names == ['col_0', 'col_1'], 'column_names with no header'
+        assert not has_header, 'no header should be detected'
+
+        # with header
+        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS_WITH_HEADER, delimiter), delimiter)
+        assert col_names == HEADER_2_COLS, 'column_names with header'
+        assert has_header, 'header should be detected'
 
 
 def test_is_row_a_header():
@@ -74,11 +90,11 @@ def test_single_column():
                                             {'count': 6, 'max': 6, 'min': 1, 'median': 3.5})
 
 
-def test_single_column_with_different_separators():
-    separators = [',', '|', ' ', '\t']
-    for separator in separators:
+def test_single_column_with_different_delimiters():
+    delimiters = [',', '|', ' ', '\t']
+    for delimiter in delimiters:
         analyze_numeric_data_expected_vs_actual([1, 2, 3, 4, 5, 6],
-                                                {'count': 6, 'max': 6, 'min': 1, 'median': 3.5}, separator)
+                                                {'count': 6, 'max': 6, 'min': 1, 'median': 3.5}, delimiter)
 
 
 def test_two_columns_use_first():
