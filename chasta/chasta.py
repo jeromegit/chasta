@@ -58,8 +58,8 @@ def determine_types(dtypes: Set[Any]) -> Tuple[bool, bool, bool]:
     return is_num_only, is_non_num_only, is_mixed
 
 
-def analyze_file(file_path: str, delimiter: str = ',', column: str = '0') -> Union[
-    pd.DataFrame, None]:
+def analyze_file(file_path: str, do_instance_count: bool = False, delimiter: str = ',', column: str = '0') -> Union[
+    pd.DataFrame, pd.Series, None]:
     try:
         col_names, has_header = determine_col_names(file_path, delimiter)
         if has_header:
@@ -89,10 +89,12 @@ def analyze_file(file_path: str, delimiter: str = ',', column: str = '0') -> Uni
         include = 'all'
     #    print(df)
 
-    stats = df.describe(percentiles=[.25, .50, .75, .90, .95, .99, .999],
-                        include='all')
-    if not is_non_num_only:
-        stats.loc['median'] = df.describe().loc[['50%']].values[0]
+    if do_instance_count:
+        stats = df.value_counts()
+    else:
+        stats = df.describe(percentiles=[.25, .50, .75, .90, .95, .99, .999], include='all')
+        if not is_non_num_only:
+            stats.loc['median'] = df.describe().loc[['50%']].values[0]
     if Debug:
         print('-' * 80)
         print(df.value_counts())
@@ -103,10 +105,14 @@ def analyze_file(file_path: str, delimiter: str = ',', column: str = '0') -> Uni
     return stats
 
 
-def print_stats(stats_df: pd.DataFrame) -> None:
-    if stats_df is not None:
-        print(f"Stats for column(s):{', '.join(stats_df.columns.astype(str))}:")
-        print(stats_df)
+def print_stats(stats: Union[None, pd.DataFrame, pd.Series]) -> None:
+    if stats is not None:
+        if isinstance(stats, pd.DataFrame):
+            print(f"Stats for column(s):{', '.join(stats.columns.astype(str))}:")
+            print(stats)
+        else:
+            print(stats.to_string(dtype=False))
+
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,6 +120,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-d", "--delimiter", type=str, default=",", help="column delimiter (default: ',')")
     parser.add_argument("-c", "--columns", type=str, default="0",
                         help="CSV column number(s) or name(s) to analyze (default: 0)")
+    parser.add_argument("-i", "--instance_count", action='store_true', help="Instance count")
     parser.add_argument("-n", "--num_only", action='store_true', help="Only consider numeric values")
     #    parser.add_argument("-u", "--use_header", action='store_true', help="Use provided headers")
 
@@ -128,7 +135,7 @@ def main():
         file_path = args.file
     else:
         file_path = sys.stdin
-    stats_df = analyze_file(file_path, args.delimiter, args.columns)
+    stats_df = analyze_file(file_path, args.instance_count, args.delimiter, args.columns)
     print_stats(stats_df)
 
 

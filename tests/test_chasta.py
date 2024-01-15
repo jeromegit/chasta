@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Union
 
-import pytest
 import pandas as pd
+import pytest
 
 import chasta.chasta as cs
 
@@ -38,8 +38,9 @@ def convert_array_to_str(data: List[Any], delimiter: str) -> str:
 def analyze_numeric_data_expected_vs_actual(data: List[Any],
                                             expected_kvs: Union[Dict[str, float], List[Dict[str, float]]],
                                             delimiter: str = ',',
-                                            cols: str = "0") -> None:
-    actual = cs.analyze_file(data_to_file(data), delimiter, cols)
+                                            cols: str = "0",
+                                            instance_count: bool = False) -> None:
+    actual = cs.analyze_file(data_to_file(data), instance_count, delimiter, cols)
 
     if not isinstance(expected_kvs, list):
         expected_kvs = [expected_kvs]
@@ -50,7 +51,8 @@ def analyze_numeric_data_expected_vs_actual(data: List[Any],
             assert (k in actual.index), f"stat:{k} wasn't returned"
             actual_value = actual.loc[k] if len(actual.loc[k]) == 1 else actual.loc[k][expected_kv_index]
             if k == 'top':
-                actual_value = actual_value.astype(str).tolist()[0] if isinstance(actual_value, pd.Series) else actual_value
+                actual_value = actual_value.astype(str).tolist()[0] if isinstance(actual_value,
+                                                                                  pd.Series) else actual_value
                 assert actual_value == expected, f"failed for key:{k} and index:{expected_kv_index}"
             else:
                 assert float(actual_value) == float(expected), f"failed for key:{k} and index:{expected_kv_index}"
@@ -127,10 +129,17 @@ def test_non_numeric_two_columns_use_first():
                                             {'count': 3, 'unique': 2, 'top': 'france', 'freq': 2},
                                             ',', '0')
 
+
 def test_non_numeric_two_columns_use_second():
     analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_2_COLS,
                                             {'count': 3, 'unique': 3, 'top': 'paris', 'freq': 1},
                                             ',', '1')
+
+
+def test_non_numeric_two_columns_use_first_with_count():
+    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_2_COLS,
+                                            {'france': 2, 'england': 1},
+                                            ',', '0', True)
 
 
 def test_analyze_file():
