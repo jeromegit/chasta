@@ -89,8 +89,8 @@ def test_determine_column_names():
 
 
 def test_is_row_a_header():
-    assert cs.is_row_a_header('1,2,3'.split(',')) == False, 'all digits'
-    assert cs.is_row_a_header('1.1,2.2,3.0'.split(',')) == False, 'all floats'
+    assert cs.is_row_a_header('1,2,-3'.split(',')) == False, 'all digits'
+    assert cs.is_row_a_header('1.1,2.2,-3.0'.split(',')) == False, 'all floats'
     assert cs.is_row_a_header('a,2,3'.split(',')) == True, 'one letter'
     assert cs.is_row_a_header('a,b,c'.split(',')) == True, 'all letters'
 
@@ -98,6 +98,11 @@ def test_is_row_a_header():
 def test_single_column():
     analyze_numeric_data_expected_vs_actual([1, 2, 3, 4, 5, 6],
                                             {'count': 6, 'max': 6, 'min': 1, 'median': 3.5})
+
+
+def test_single_column_with_floats():
+    analyze_numeric_data_expected_vs_actual([+2.0, 0.0, -3.5, 3.5, -6.5],
+                                            {'count': 5, 'max': 3.5, 'min': -6.5, 'median': 0.0, 'mean': -0.9})
 
 
 def test_single_column_with_different_delimiters():
@@ -143,8 +148,9 @@ def test_non_numeric_two_columns_use_first_with_count():
 
 
 def test_analyze_file():
-    actual = cs.analyze_file("/tmp/aa")
-    assert actual is None, "Issue with missing file"
+    stats, chart = cs.analyze_file("/tmp/aa")
+    assert stats is None, "Issue with missing file"
+    assert chart is None, "Issue with missing file"
 
 
 if __name__ == '__main__':

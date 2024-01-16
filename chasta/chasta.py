@@ -1,3 +1,4 @@
+import _csv
 import argparse
 import csv
 import sys
@@ -22,22 +23,33 @@ def determine_column_name(column: str, df_columns: List[str]) -> str:
 
 
 def is_row_a_header(row: List[str]) -> bool:
-    return any(not value.replace('.', '', 1).isdigit() for value in row)
+    return not is_row_all_digits(row)
 
 
 def is_row_all_digits(row: List[str]) -> bool:
-    return all(col.isdigit() for col in row)
+    try:
+        # Try to convert each item in the row to a float
+        for item in row:
+            float(item)
+        return True
+    except ValueError:
+        # If any conversion fails, return False
+        return False
 
 
 def determine_col_names(file_path: str, delimiter: str) -> Tuple[List[str], bool]:
     with open(file_path) as fd:
+        try:
+            header = csv.Sniffer().has_header(fd.read(1024))
+        except _csv.Error as _:
+            header = False
+        fd.seek(0)
         reader = csv.reader(fd, delimiter=delimiter)
-        first_line = next(reader)
-        second_line = next(reader)
-        if is_row_a_header(first_line) and is_row_all_digits(second_line):
-            return first_line, True
+        first_row = next(reader)
+        if header:
+            return first_row, True
         else:
-            col_count = len(first_line)
+            col_count = len(first_row)
             col_names = [f"col_{col}" for col in range(0, col_count)]
             return col_names, False
 
