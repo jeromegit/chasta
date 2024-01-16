@@ -7,11 +7,11 @@ import chasta.chasta as cs
 
 DEFAULT_DATA_FILE_PATH = '/tmp/chasta_test_data.txt'
 
-DATA_3_ROWS_2_COLS: List[List[str]] = [['1', '10'], ['3', '30'], ['2', '20']]
-HEADER_2_COLS: List[str] = ['single_digit', 'double_digit']
-DATA_3_ROWS_2_COLS_WITH_HEADER: List[List[str]] = [HEADER_2_COLS, *DATA_3_ROWS_2_COLS]
+DATA_3_ROWS_3_COLS: List[List[str]] = [['1', '10', '2'], ['3', '30', '6'], ['2', '20', '4']]
+HEADER_3_COLS: List[str] = ['single_digit', 'double_digit', 'double']
+DATA_3_ROWS_3_COLS_WITH_HEADER: List[List[str]] = [HEADER_3_COLS, *DATA_3_ROWS_3_COLS]
 
-NON_NUMERIC_DATA_3_ROWS_2_COLS: List[List[str]] = [['france', 'paris'], ['france', 'nice'], ['england', 'london']]
+NON_NUMERIC_DATA_3_ROWS_3_COLS: List[List[str]] = [['france', 'paris'], ['france', 'nice'], ['england', 'london']]
 
 
 def data_to_file(data: Union[str, List[str]], delimiter: str = ',', file_path: str = DEFAULT_DATA_FILE_PATH):
@@ -65,8 +65,8 @@ def test_determine_column_name():
         assert cs.determine_column_name('2', digit_col_names), 'using digit greater than max'
     assert "The specified column number can't be > 1" in str(ae.value)
 
-    name_col_names = HEADER_2_COLS
-    col_name = HEADER_2_COLS[0]
+    name_col_names = HEADER_3_COLS
+    col_name = HEADER_3_COLS[0]
     assert cs.determine_column_name(col_name, name_col_names) == col_name, 'using column name'
     with pytest.raises(AssertionError) as ae:
         assert cs.determine_column_name('bad_col_name', name_col_names), 'using digit greater than max'
@@ -77,14 +77,14 @@ def test_determine_column_names():
     delimiters = [',', '|', ' ', '\t']
     for delimiter in delimiters:
         # with no header
-        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS, delimiter), delimiter)
-        assert col_names == ['col_0', 'col_1'], 'column_names with no header'
+        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_3_COLS, delimiter), delimiter)
+        assert col_names == ['col_0', 'col_1', 'col_2'], 'column_names with no header'
         assert not has_header, 'no header should be detected'
 
         # with header
-        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_2_COLS_WITH_HEADER, delimiter),
+        col_names, has_header = cs.determine_col_names(data_to_file(DATA_3_ROWS_3_COLS_WITH_HEADER, delimiter),
                                                        delimiter)
-        assert col_names == HEADER_2_COLS, 'column_names with header'
+        assert col_names == HEADER_3_COLS, 'column_names with header'
         assert has_header, 'header should be detected'
 
 
@@ -108,16 +108,16 @@ def test_single_column_with_different_delimiters():
 
 
 def test_two_columns_use_first():
-    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_2_COLS, {'count': 3, 'max': 3, 'min': 1, 'median': 2}, ',', '0')
+    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_3_COLS, {'count': 3, 'max': 3, 'min': 1, 'median': 2}, ',', '0')
 
 
 def test_two_columns_use_second():
-    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_2_COLS, {'count': 3, 'max': 30, 'min': 10, 'median': 20}, ',',
+    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_3_COLS, {'count': 3, 'max': 30, 'min': 10, 'median': 20}, ',',
                                             '1')
 
 
 def test_two_columns_use_both():
-    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_2_COLS,
+    analyze_numeric_data_expected_vs_actual(DATA_3_ROWS_3_COLS,
                                             [{'count': 3, 'max': 3, 'min': 1, 'median': 2},
                                              {'count': 3, 'max': 30, 'min': 10, 'median': 20}],
                                             ',',
@@ -125,19 +125,19 @@ def test_two_columns_use_both():
 
 
 def test_non_numeric_two_columns_use_first():
-    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_2_COLS,
+    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_3_COLS,
                                             {'count': 3, 'unique': 2, 'top': 'france', 'freq': 2},
                                             ',', '0')
 
 
 def test_non_numeric_two_columns_use_second():
-    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_2_COLS,
+    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_3_COLS,
                                             {'count': 3, 'unique': 3, 'top': 'paris', 'freq': 1},
                                             ',', '1')
 
 
 def test_non_numeric_two_columns_use_first_with_count():
-    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_2_COLS,
+    analyze_numeric_data_expected_vs_actual(NON_NUMERIC_DATA_3_ROWS_3_COLS,
                                             {'france': 2, 'england': 1},
                                             ',', '0', True)
 

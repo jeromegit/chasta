@@ -42,8 +42,8 @@ def determine_col_names(file_path: str, delimiter: str) -> Tuple[List[str], bool
             return col_names, False
 
 
-def analyze_file(file_path: str, do_instance_count: bool = False, chart: str = None, delimiter: str = ',',
-                 column: str = '0') -> Tuple[pd.DataFrame, Union[pd.DataFrame, pd.Series, None]]:
+def analyze_file(file_path: str, do_instance_count: bool = False, chart: Union[None, str] = None, delimiter: str = ',',
+                 column: str = '0') -> Tuple[Union[None, pd.DataFrame], Union[pd.DataFrame, pd.Series, None]]:
     try:
         col_names, has_header = determine_col_names(file_path, delimiter)
         if has_header:
@@ -52,7 +52,7 @@ def analyze_file(file_path: str, do_instance_count: bool = False, chart: str = N
             df = pd.read_csv(file_path, sep=delimiter, header=None)
     except FileNotFoundError:
         print(f"{file_path} No such file. Aborting.")
-        return None
+        return None, None
 
     column_names = []
     if Debug:
