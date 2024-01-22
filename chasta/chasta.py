@@ -8,8 +8,11 @@ from typing import List, Tuple, Union
 
 import pandas as pd
 import plotly.express as px
+from pandas import Series, DataFrame
 
 Debug = False
+DEFAULT_DELIMITER = ','
+COMMON_DELIMITERS = ",\t| "
 
 
 def determine_column_name(column: str, df_columns: List[str]) -> str:
@@ -56,45 +59,74 @@ def determine_col_names(file_path: str, delimiter: str) -> Tuple[List[str], bool
             return col_names, False
 
 
-def analyze_file(file_path: str, do_instance_count: bool = False, chart: Union[None, str] = None, delimiter: str = ',',
-                 column: str = '0') -> Tuple[Union[None, pd.DataFrame], Union[pd.DataFrame, pd.Series, None]]:
-    try:
-        col_names, has_header = determine_col_names(file_path, delimiter)
-        if has_header:
-            df = pd.read_csv(file_path, sep=delimiter, names=col_names, skiprows=1)
-        else:
-            df = pd.read_csv(file_path, sep=delimiter, header=None)
-    except FileNotFoundError:
-        print(f"{file_path} No such file. Aborting.")
-        return None, None
+def guess_delimiter(file_path: str, delimiter: str) -> str:
+    with open(file_path) as fd:
+        first_line = fd.readline()
+        for delim in delimiter + COMMON_DELIMITERS:
+            if delim in first_line:
+                return delim
 
+    return delimiter
+
+
+def get_column_names(columns_str: str, df_columns: List[str]) -> List[str]:
     column_names = []
-    if Debug:
-        print(df)
-    column_types = set()
-    df_columns = df.columns
-    for col in column.split(','):
+    for col in columns_str.split(','):
         column_name = determine_column_name(col, df_columns)
         column_names.append(column_name)
-        column_types.add(df[column_name].dtypes)
 
-    df_to_stats = df[column_names]
+    return column_names
+
+
+def get_stats_and_chart_dfs(df: pd.DataFrame, chart: Union[None, str], selected_column_names: List[str]) -> Tuple[
+    pd.DataFrame, Union[None, pd.DataFrame]]:
+    df_columns = df.columns.tolist()
+    df_to_stats = df[selected_column_names]
     if chart is None:
         df_to_chart = None
     else:
         if len(chart):
+            # Add x-axis as last column
             chart_col = chart
             chart_column_name = determine_column_name(chart_col, df_columns)
-            df_to_chart = df[[*column_names, chart_column_name]]
+            df_to_chart = df[[*selected_column_names, chart_column_name]]
         else:
             df_to_chart = df_to_stats
 
+    return df_to_stats, df_to_chart
+
+
+def get_stats_from_df(df_to_stats: pd.DataFrame, do_instance_count: bool) -> Union[Series, DataFrame]:
     if do_instance_count:
         stats = df_to_stats.value_counts()
     else:
         stats = df_to_stats.describe(percentiles=[.25, .50, .75, .90, .95, .99, .999], include='all')
         if '50%' in stats.index:
             stats.loc['median'] = stats.loc['50%']
+
+    return stats
+
+
+def analyze_file(file_path: str, do_instance_count: bool = False, chart: Union[None, str] = None, delimiter: str = ',',
+                 columns_str: str = '0') -> Tuple[Union[None, pd.DataFrame], Union[pd.DataFrame, pd.Series, None]]:
+    try:
+        delimiter = guess_delimiter(file_path, delimiter)
+        col_names, has_header = determine_col_names(file_path, delimiter)
+        if has_header:
+            df = pd.read_csv(file_path, sep=delimiter, names=col_names, skiprows=1)
+        else:
+            df = pd.read_csv(file_path, sep=delimiter, header=None)
+            df.columns = col_names
+    except FileNotFoundError:
+        print(f"{file_path} No such file. Aborting.")
+        return None, None
+
+    if Debug:
+        print(df)
+
+    selected_column_names = get_column_names(columns_str, col_names)
+    df_to_stats, df_to_chart = get_stats_and_chart_dfs(df, chart, selected_column_names)
+    stats = get_stats_from_df(df_to_stats, do_instance_count)
 
     return stats, df_to_chart
 
@@ -109,10 +141,13 @@ def print_stats(stats: Union[None, pd.DataFrame, pd.Series]) -> None:
 
 
 def chart(chart_df: pd.DataFrame, x_axis: Union[None, str]) -> None:
-    fig = px.area(chart_df)
-    # , y)=NEW_TO_ACK,
-    #                  x='dt_in'
-    # )
+    if x_axis:
+        # if x_axis is specified the column, it's the last one, so chart the other columns on the Y axis
+        x_axis_col = chart_df.columns[-1]
+        y_axis_cols = chart_df.columns[:-1]
+        fig = px.area(chart_df, x=x_axis_col, y=y_axis_cols)
+    else:
+        fig = px.area(chart_df)
     fig.update_layout(hovermode='x unified')
 
     fig.show()
@@ -134,7 +169,8 @@ def create_tmp_file_with_stdin() -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyze a CSV file")
-    parser.add_argument("-d", "--delimiter", type=str, default=",", help="column delimiter (default: ',')")
+    parser.add_argument("-d", "--delimiter", type=str, default=DEFAULT_DELIMITER,
+                        help=f"column delimiter (default: {DEFAULT_DELIMITER})")
     parser.add_argument("-c", "--columns", type=str, default="0",
                         help="CSV list of column number(s) or name(s) to analyze (default: 0)")
     parser.add_argument("-C", "--chart", nargs='?', const='', default=None,
@@ -154,6 +190,7 @@ def main():
         file_path = args.file
     else:
         file_path = create_tmp_file_with_stdin()
+
     stats_obj, chart_df = analyze_file(file_path, args.instance_count, args.chart, args.delimiter, args.columns)
 
     print_stats(stats_obj)
@@ -165,5 +202,6 @@ def main():
         # clean up tmp STDIN file
         os.remove(file_path)
 
-    if __name__ == "__main__":
-        main()
+
+if __name__ == "__main__":
+    main()

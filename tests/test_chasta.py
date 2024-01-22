@@ -14,7 +14,8 @@ DATA_3_ROWS_3_COLS_WITH_HEADER: List[List[str]] = [HEADER_3_COLS, *DATA_3_ROWS_3
 NON_NUMERIC_DATA_3_ROWS_3_COLS: List[List[str]] = [['france', 'paris'], ['france', 'nice'], ['england', 'london']]
 
 
-def data_to_file(data: Union[str, List[str]], delimiter: str = ',', file_path: str = DEFAULT_DATA_FILE_PATH):
+def data_to_file(data: Union[str, List[str], List[List[str]]], delimiter: str = ',',
+                 file_path: str = DEFAULT_DATA_FILE_PATH):
     if isinstance(data, list):
         data = convert_array_to_str(data, delimiter)
     with open(file_path, "w") as fd:
@@ -71,6 +72,12 @@ def test_determine_column_name():
     with pytest.raises(AssertionError) as ae:
         assert cs.determine_column_name('bad_col_name', name_col_names), 'using digit greater than max'
     assert f"The specified column name:bad_col_name is not in: {', '.join(name_col_names)}" in str(ae.value)
+
+
+def test_smart_guess_delimiter():
+    for delimiter in cs.COMMON_DELIMITERS:
+        guessed_delimiter = cs.guess_delimiter(data_to_file(DATA_3_ROWS_3_COLS, delimiter), cs.DEFAULT_DELIMITER)
+        assert guessed_delimiter == delimiter
 
 
 def test_determine_column_names():
@@ -148,7 +155,7 @@ def test_non_numeric_two_columns_use_first_with_count():
 
 
 def test_analyze_file():
-    stats, chart = cs.analyze_file("/tmp/aa")
+    stats, chart = cs.analyze_file("/bogus/file/does/not/exist")
     assert stats is None, "Issue with missing file"
     assert chart is None, "Issue with missing file"
 
