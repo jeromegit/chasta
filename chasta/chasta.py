@@ -1,6 +1,8 @@
 import _csv
 import argparse
 import csv
+import getpass
+import os
 import sys
 from typing import List, Tuple, Union
 
@@ -114,20 +116,34 @@ def chart(chart_df: pd.DataFrame, x_axis: Union[None, str]) -> None:
     fig.update_layout(hovermode='x unified')
 
     fig.show()
+    with open('/tmp/chasta.html', 'w') as fd:
+        fd.write(fig.to_html(include_plotlyjs='cdn'))
+
+    fig.to_html()
+
+
+def create_tmp_file_with_stdin() -> str:
+    user_name = getpass.getuser()
+    tmp_file_path = f'/tmp/chasta_{user_name}.tmp'
+    with open(tmp_file_path, 'w') as fd:
+        for line in sys.stdin:
+            fd.write(line)
+
+    return tmp_file_path
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyze a CSV file")
     parser.add_argument("-d", "--delimiter", type=str, default=",", help="column delimiter (default: ',')")
     parser.add_argument("-c", "--columns", type=str, default="0",
-                        help="CSV column number(s) or name(s) to analyze (default: 0)")
+                        help="CSV list of column number(s) or name(s) to analyze (default: 0)")
     parser.add_argument("-C", "--chart", nargs='?', const='', default=None,
                         help="Chart column(s) optionally specifying the column number/name for the x-axis")
     parser.add_argument("-i", "--instance_count", action='store_true', help="Instance count")
     parser.add_argument("-n", "--num_only", action='store_true', help="Only consider numeric values")
     #    parser.add_argument("-u", "--use_header", action='store_true', help="Use provided headers")
 
-    parser.add_argument("file", type=str, nargs='?', help="path to the CSV file")
+    parser.add_argument("file", type=str, nargs='?', help="path to the CSV file or none for STDIN")
 
     return parser.parse_args()
 
@@ -137,7 +153,7 @@ def main():
     if args.file:
         file_path = args.file
     else:
-        file_path = sys.stdin
+        file_path = create_tmp_file_with_stdin()
     stats_obj, chart_df = analyze_file(file_path, args.instance_count, args.chart, args.delimiter, args.columns)
 
     print_stats(stats_obj)
@@ -145,6 +161,9 @@ def main():
     if args.chart is not None:
         chart(chart_df, args.chart)
 
+    if file_path != args.file:
+        # clean up tmp STDIN file
+        os.remove(file_path)
 
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()

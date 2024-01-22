@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "chasta"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+description = "CHArt and run STAtitics on CSV data"
 authors = ["Jerome Provensal <jeromegit@provensal.com>"]
 readme = "README.md"
 
